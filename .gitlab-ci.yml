@@ -1,5 +1,7 @@
 deployBackend:
   script:
   - cp -r * /srv/http/sonne
+  - cd /srv/http/sonne
+  - pip install --user -r requirements.txt
   only:
   - backend
