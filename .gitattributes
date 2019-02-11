@@ -1,0 +1,8 @@
+*.tex diff=tex
+*.py diff=python
+*.html diff=html
+*.css diff=css
+*.bib diff=bibtex
+*.java diff=java
+*.cpp diff=cpp
+*.hpp diff=cpp
