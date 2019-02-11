@@ -6,3 +6,5 @@ deployBackend:
   - sudo systemctl restart daphne
   only:
   - backend
+  tags:
+  - sonne
