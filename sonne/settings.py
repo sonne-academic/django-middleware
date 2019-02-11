@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 
 import os
 import socket
+from pathlib import Path
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -20,14 +21,17 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '$39&prvnp-+)docy$k&ue425%g5e$6$@sv!*_@prtg-^$8v8*i'
-
 # SECURITY WARNING: don't run with debug turned on in production!
 if socket.gethostname() == 'sonne':
+    print('running in PRODUCTION mode')
     DEBUG = False
-    # TODO: set secret key from file
+    SECRET_KEY = Path('/srv/http/DJANGO_SECRET').read_text()
+    SOLR_HOST = 'http://solr1:8981'
 else:
+    print('running in DEBUG mode')
     DEBUG = True
+    SOLR_HOST = 'http://localhost:8983'
+    SECRET_KEY = '$39&prvnp-+)docy$k&ue425%g5e$6$@sv!*_@prtg-^$8v8*i'
 ALLOWED_HOSTS = []
 
 

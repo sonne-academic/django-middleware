@@ -6,6 +6,10 @@ from json.decoder import JSONDecodeError
 from enum import Enum
 import logging
 import asyncio
+from django.conf import settings
+
+API = f'{settings.SOLR_HOST}/api'
+
 
 class Method(Enum):
     DELETE = "DELETE"
@@ -27,16 +31,16 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
     async def get_result(self, endpoint: str, method: str, payload: dict) -> dict:
         async with ClientSession() as sess:
             if "DELETE" == method:
-                async with sess.delete('http://localhost:8983/api' + endpoint, json=payload) as response:
+                async with sess.delete(API + endpoint, json=payload) as response:
                     return await response.json()
             if "PUT" == method:
-                async with sess.put('http://localhost:8983/api' + endpoint, json=payload) as response:
+                async with sess.put(API + endpoint, json=payload) as response:
                     return await response.json()
             if "GET" == method:
-                async with sess.get('http://localhost:8983/api' + endpoint, json=payload) as response:
+                async with sess.get(API + endpoint, json=payload) as response:
                     return await response.json()
             if "POST" == method:
-                async with sess.post('http://localhost:8983/api' + endpoint, json=payload) as response:
+                async with sess.post(API + endpoint, json=payload) as response:
                     return await response.json()
 
     @command('send a command to solr', {
