@@ -3,6 +3,6 @@ deployBackend:
   - cp -r * /srv/http/sonne
   - cd /srv/http/sonne
   - pip install --user -r requirements.txt
-  - systemctl restart daphne
+  - sudo systemctl restart daphne
   only:
   - backend
