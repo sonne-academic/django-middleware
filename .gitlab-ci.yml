@@ -1,5 +1,5 @@
 deployBackend:
   script:
-  - cp -r ./ /srv/http/sonne
+  - cp -r * /srv/http/sonne
   only:
   - backend
