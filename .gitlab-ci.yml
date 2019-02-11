@@ -1,7 +1,5 @@
 deployBackend:
   script:
-  - groups
-  - whoami
-  - sudo -u http cp -r ./ /srv/http/sonne
+  - cp -r ./ /srv/http/sonne
   only:
   - backend
