@@ -26,7 +26,7 @@ if socket.gethostname() == 'sonne':
     print('running in PRODUCTION mode')
     DEBUG = False
     SECRET_KEY = Path('/srv/http/DJANGO_SECRET').read_text()
-    SOLR_HOST = 'http://solr1:8981'
+    SOLR_HOST = 'http://solr1:8983'
 else:
     print('running in DEBUG mode')
     DEBUG = True
