@@ -9,7 +9,8 @@ import asyncio
 from django.conf import settings
 
 API = f'{settings.SOLR_HOST}/api'
-
+SOLR = f'{settings.SOLR_HOST}/solr'
+log = logging.getLogger('JsonRpcSolrPassthrough')
 
 class Method(Enum):
     DELETE = "DELETE"
@@ -28,7 +29,7 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         await self.http.close()
         return await super().disconnect(code)
 
-    async def get_result(self, endpoint: str, method: str, payload: dict) -> dict:
+    async def get_result_api(self, endpoint: str, method: str, payload: dict) -> dict:
         async with ClientSession() as sess:
             if "DELETE" == method:
                 async with sess.delete(API + endpoint, json=payload) as response:
@@ -43,21 +44,36 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
                 async with sess.post(API + endpoint, json=payload) as response:
                     return await response.json()
 
-    @command('send a command to solr', {
+    async def get_result_solr(self, endpoint: str, method: str, params: dict) -> dict:
+        async with ClientSession() as sess:
+            if "DELETE" == method:
+                async with sess.delete(SOLR + endpoint, params=params) as response:
+                    return await response.json()
+            if "PUT" == method:
+                async with sess.put(SOLR + endpoint, params=params) as response:
+                    return await response.json()
+            if "GET" == method:
+                async with sess.get(SOLR + endpoint, params=params) as response:
+                    return await response.json()
+            if "POST" == method:
+                async with sess.post(SOLR + endpoint, params=params) as response:
+                    return await response.json()
+
+    @command('send a command to the solr api', {
         'endpoint': 'the endpoint of the api: i.e. "/collections"',
         'method': 'one of [DELETE, PUT, GET, POST]',
         'payload': 'the parameters of the command, send an empty object for GET requests',
         'return': 'the result of the response'
     })
     async def pass_through(self, endpoint: str, method: Method, payload: dict):
-        logging.debug(f'{method}: {endpoint} {payload}')
+        log.debug(f'{method}: {endpoint} {payload}')
         if isinstance(method, Method):
             method = method.value
         if method not in Method.__members__:
             raise JsonRpcInvalidParams(f'unsupported method: {method}, must be one of [DELETE, PUT, GET, POST]')
         yield {'responseHeader': {'status': 'accept'}}
         try:
-            result = await self.get_result(endpoint, method, payload)
+            result = await self.get_result_api(endpoint, method, payload)
         except ClientConnectionError as e:
             raise JsonRpcInternalError('could not connect to backend: ' + str(e))
         except JSONDecodeError as e:
@@ -69,4 +85,32 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         else:
             yield result
         yield {'responseHeader': {'status': 'finished'}}
-        logging.debug(f'FINISHED: {method}: {endpoint} {payload}')
+        log.debug(f'FINISHED: {method}: {endpoint} {payload}')
+
+    @command('send a request to solr', {
+        'endpoint': 'the endpoint of the api: i.e. "/collections"',
+        'method': 'one of [DELETE, PUT, GET, POST]',
+        'payload': 'the parameters of the command, send an empty object for GET requests',
+        'return': 'the result of the response'
+    })
+    async def pass_through_solr(self, endpoint: str, method: Method, payload: dict):
+        log.debug(f'{method}: {endpoint} {payload}')
+        if isinstance(method, Method):
+            method = method.value
+        if method not in Method.__members__:
+            raise JsonRpcInvalidParams(f'unsupported method: {method}, must be one of [DELETE, PUT, GET, POST]')
+        yield {'responseHeader': {'status': 'accept'}}
+        try:
+            result = await self.get_result_solr(endpoint, method, payload)
+        except ClientConnectionError as e:
+            raise JsonRpcInternalError('could not connect to backend: ' + str(e))
+        except JSONDecodeError as e:
+            raise JsonRpcInternalError('solr did not respond with valid JSON', e.__dict__)
+        except Exception as e:
+            raise JsonRpcInternalError('something bad happened: ' + str(e), {'exception_type': str(type(e))})
+        if 'error' in result:
+            raise JsonRpcInternalError('solr responded with an error', result['error'])
+        else:
+            yield result
+        yield {'responseHeader': {'status': 'finished'}}
+        log.debug(f'FINISHED: {method}: {endpoint} {payload}')
