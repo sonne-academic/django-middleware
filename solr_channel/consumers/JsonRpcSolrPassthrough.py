@@ -32,31 +32,31 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
     async def get_result_api(self, endpoint: str, method: str, payload: dict) -> dict:
         async with ClientSession() as sess:
             if "DELETE" == method:
-                async with sess.delete(API + endpoint, json=payload) as response:
+                async with sess.delete(endpoint, json=payload) as response:
                     return await response.json()
             if "PUT" == method:
-                async with sess.put(API + endpoint, json=payload) as response:
+                async with sess.put(endpoint, json=payload) as response:
                     return await response.json()
             if "GET" == method:
-                async with sess.get(API + endpoint, json=payload) as response:
+                async with sess.get(endpoint, json=payload) as response:
                     return await response.json()
             if "POST" == method:
-                async with sess.post(API + endpoint, json=payload) as response:
+                async with sess.post(endpoint, json=payload) as response:
                     return await response.json()
 
     async def get_result_solr(self, endpoint: str, method: str, params: dict) -> dict:
         async with ClientSession() as sess:
             if "DELETE" == method:
-                async with sess.delete(SOLR + endpoint, params=params) as response:
+                async with sess.delete(endpoint, params=params) as response:
                     return await response.json()
             if "PUT" == method:
-                async with sess.put(SOLR + endpoint, params=params) as response:
+                async with sess.put(endpoint, params=params) as response:
                     return await response.json()
             if "GET" == method:
-                async with sess.get(SOLR + endpoint, params=params) as response:
+                async with sess.get(endpoint, params=params) as response:
                     return await response.json()
             if "POST" == method:
-                async with sess.post(SOLR + endpoint, params=params) as response:
+                async with sess.post(endpoint, params=params) as response:
                     return await response.json()
 
     @command('send a command to the solr api', {
@@ -73,7 +73,7 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
             raise JsonRpcInvalidParams(f'unsupported method: {method}, must be one of [DELETE, PUT, GET, POST]')
         yield {'responseHeader': {'status': 'accept'}}
         try:
-            result = await self.get_result_api(endpoint, method, payload)
+            result = await self.get_result_api(API + endpoint, method, payload)
         except ClientConnectionError as e:
             raise JsonRpcInternalError('could not connect to backend: ' + str(e))
         except JSONDecodeError as e:
@@ -101,7 +101,7 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
             raise JsonRpcInvalidParams(f'unsupported method: {method}, must be one of [DELETE, PUT, GET, POST]')
         yield {'responseHeader': {'status': 'accept'}}
         try:
-            result = await self.get_result_solr(endpoint, method, payload)
+            result = await self.get_result_solr(SOLR + endpoint, method, payload)
         except ClientConnectionError as e:
             raise JsonRpcInternalError('could not connect to backend: ' + str(e))
         except JSONDecodeError as e:
@@ -114,3 +114,13 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
             yield result
         yield {'responseHeader': {'status': 'finished'}}
         log.debug(f'FINISHED: {method}: {endpoint} {payload}')
+
+    @command('search a solr collection', {
+        'collection': 'the collection you want to search in',
+        'payload': 'the parameters of the search',
+        'return': 'the result of the response'
+    })
+    async def select(self, collection: str, payload: dict):
+        endpoint = f'/c/{collection}/select'
+        async for res in self.pass_through(endpoint, Method.GET, payload):
+            yield res
