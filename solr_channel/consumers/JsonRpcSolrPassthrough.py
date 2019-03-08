@@ -94,7 +94,7 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         'return': 'the result of the response'
     })
     async def pass_through_solr(self, endpoint: str, method: Method, payload: dict):
-        log.debug(f'{method}: {endpoint} {payload}')
+        print(f'{method}: {endpoint} {payload}')
         if isinstance(method, Method):
             method = method.value
         if method not in Method.__members__:
@@ -123,4 +123,14 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
     async def select(self, collection: str, payload: dict):
         endpoint = f'/c/{collection}/select'
         async for res in self.pass_through(endpoint, Method.GET, payload):
+            yield res
+
+    @command('search a solr collection', {
+        'collection': 'the collection you want to search in',
+        'payload': 'the parameters of the search',
+        'return': 'the result of the response'
+    })
+    async def get(self, collection: str, id: str):
+        endpoint = f'/{collection}/get'
+        async for res in self.pass_through_solr(endpoint, Method.GET, {'id': id}):
             yield res
