@@ -34,6 +34,77 @@ else:
     SECRET_KEY = '$39&prvnp-+)docy$k&ue425%g5e$6$@sv!*_@prtg-^$8v8*i'
 ALLOWED_HOSTS = []
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            # 'format': '[{levelname}-{asctime}][{module}][{process:d}-{thread:d}] {message}',
+            'format': '[{levelname:5s}][{asctime}][{module}.{name}][{funcName}] {message}',
+            'style': '{',
+        },
+        'shorter': {
+            # 'format': '[{levelname}-{asctime}][{module}][{process:d}-{thread:d}] {message}',
+            'format': '[{levelname:5s}][{asctime}][{module}][{funcName}] {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'stdout': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'stderr': {
+            'level': 'ERROR',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'shorter': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+            'formatter': 'shorter',
+        },
+    },
+    'loggers': {
+        # 'JsonRpcSolrPassthrough': {
+        #     'handlers': ['stdout'],
+        #     'level': 'INFO',
+        #     'propagate': True,
+        # },
+        'channels_zeromq': {
+            'handlers': ['stdout','stderr'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'solr_channel': {
+            'handlers': ['shorter'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    }
+}
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_zeromq.core.ZeroMqGroupLayer',
+        'CONFIG': {
+            "capacity": 2,
+            "channel_capacity": 1000,
+        },
+    },
+}
+
 
 # Application definition
 
