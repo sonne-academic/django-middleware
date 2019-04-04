@@ -4,8 +4,8 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from dataclasses import dataclass, field, asdict
 from typing import Union
-
 from .JsonRpcExceptions import *
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -73,6 +73,7 @@ class JsonRpcConsumer(AsyncWebsocketConsumer):
             return
 
     async def send_error(self, exception: JsonRpcException, msg_id):
+        log.error(exception.message)
         await self.send_json(asdict(JsonRpcErrorResponse(exception.error, msg_id)))
 
     async def send_response(self, response: JsonRpcResultResponse):
