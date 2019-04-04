@@ -4,14 +4,21 @@ import logging
 import inspect
 from typing import Dict, Iterable, Callable
 from enum import Enum
+from django.conf import settings
 import asyncio
 
-__all__ = ['JsonRpcHandlerBase', 'command']
+__all__ = ['JsonRpcHandlerBase', 'command', 'Availability']
+
+log = logging.getLogger(__name__)
 
 
 def get_parameters(signature: inspect.Signature) -> Iterable[inspect.Parameter]:
     for parameter in signature.parameters.values():
         yield parameter
+
+class Availability(Enum):
+    DEBUG_ONLY = 'DEBUG_ONLY'
+    PRODUCTION = 'PRODUCTION'
 
 
 # 6.1.1. type
@@ -35,6 +42,8 @@ def make_json_schema(decorated_fn: Callable, argdoc: Dict[str, str]):
     required = []
     for parameter in get_parameters(signature):
         if 'self' == parameter.name:
+            continue
+        if 'rqid' == parameter.name:
             continue
         prop = {}
         try:
@@ -71,7 +80,6 @@ def make_json_schema(decorated_fn: Callable, argdoc: Dict[str, str]):
 
 
 class JsonRpcHandlerBase(JsonRpcConsumer):
-    log = logging.getLogger('JsonRpcHandler')
     commands = {}
 
     def __init__(self, *args, **kwargs):
@@ -79,11 +87,14 @@ class JsonRpcHandlerBase(JsonRpcConsumer):
         self.tasks = []
 
     @classmethod
-    def command(cls, help_text: str, argdoc: Dict[str, str] = None):
+    def command(cls, help_text: str, availability: Availability, argdoc: Dict[str, str] = None):
         def register_func(decorated_fn):
+            if not settings.DEBUG and availability == Availability.DEBUG_ONLY:
+                log.error(f'ignoring debug only function: {decorated_fn.__qualname__}')
+                return decorated_fn
             if not inspect.isasyncgenfunction(decorated_fn):
                 err = f'commands must be async generator function, but {decorated_fn.__qualname__} is not. it is {type(decorated_fn)}'
-                raise NotImplementedError(err)
+                log.error(err)
             _cls, func_name = decorated_fn.__qualname__.split('.')
             if _cls not in cls.commands:
                 cls.commands[_cls] = {}
@@ -113,13 +124,17 @@ class JsonRpcHandlerBase(JsonRpcConsumer):
             return
 
         async_gen = getattr(self, request.method)
+        params = request.params
+        params['rqid'] = request.id
         try:
-            awaitable = async_gen(**request.params)
+            awaitable = async_gen(**params)
         except TypeError as e:
             raise JsonRpcInvalidParams(str(e))
         # TODO: periodically collect tasks and exceptions
         # self.tasks.append(asyncio.create_task(self.respond(request, awaitable)))
         async for result in awaitable:
+            if result is None:
+                continue
             await self.send_response(JsonRpcResultResponse(result, request.id))
 
 
