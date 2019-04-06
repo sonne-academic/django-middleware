@@ -87,7 +87,7 @@ class JsonRpcHandlerBase(JsonRpcConsumer):
         self.tasks = []
 
     @classmethod
-    def command(cls, help_text: str, availability: Availability, argdoc: Dict[str, str] = None):
+    def command(cls, availability: Availability, argdoc: Dict[str, str] = None):
         def register_func(decorated_fn):
             if not settings.DEBUG and availability == Availability.DEBUG_ONLY:
                 log.error(f'ignoring debug only function: {decorated_fn.__qualname__}')
@@ -98,7 +98,7 @@ class JsonRpcHandlerBase(JsonRpcConsumer):
             _cls, func_name = decorated_fn.__qualname__.split('.')
             if _cls not in cls.commands:
                 cls.commands[_cls] = {}
-            cls.commands[_cls][func_name] = (help_text, argdoc)
+            cls.commands[_cls][func_name] = (inspect.getdoc(decorated_fn), argdoc)
             schema = make_json_schema(decorated_fn, argdoc)
             print(schema)
             return decorated_fn

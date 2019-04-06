@@ -1,3 +1,5 @@
+from django.utils import timezone
+from django.core import exceptions as dex
 from solr_channel.consumers.JsonRpcConsumer import JsonRpcResultResponse
 from .JsonRpcHandlerBase import JsonRpcHandlerBase, command, Availability
 from .JsonRpcExceptions import JsonRpcInvalidParams, JsonRpcInternalError, JsonRpcException
@@ -9,6 +11,8 @@ import logging
 import random
 import string
 from django.conf import settings
+from channels.db import database_sync_to_async
+from solr_channel.models import Graph
 
 API = f'{settings.SOLR_HOST}/api'
 SOLR = f'{settings.SOLR_HOST}/solr'
@@ -69,13 +73,16 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
                 async with sess.post(endpoint, params=params) as response:
                     return await response.json()
 
-    @command('send a command to the solr api', Availability.DEBUG_ONLY, {
+    @command(Availability.DEBUG_ONLY, {
         'endpoint': 'the endpoint of the api: i.e. "/collections"',
         'method': 'one of [DELETE, PUT, GET, POST]',
         'payload': 'the parameters of the command, send an empty object for GET requests',
         'return': 'the result of the response'
     })
     async def pass_through(self, endpoint: str, method: Method, payload: dict, rqid: str):
+        """
+        send a command to the solr api
+        """
         log.debug(f'{method}: {endpoint} {payload}')
         if isinstance(method, Method):
             method = method.value
@@ -97,13 +104,16 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         yield {'responseHeader': {'status': 'finished'}}
         log.debug(f'FINISHED: {method}: {endpoint} {payload}')
 
-    @command('send a request to solr', Availability.DEBUG_ONLY, {
+    @command(Availability.DEBUG_ONLY, {
         'endpoint': 'the endpoint of the api: i.e. "/collections"',
         'method': 'one of [DELETE, PUT, GET, POST]',
         'payload': 'the parameters of the command, send an empty object for GET requests',
         'return': 'the result of the response'
     })
     async def pass_through_solr(self, endpoint: str, method: Method, payload: dict, rqid: str):
+        """
+        send a request to solr
+        """
         log.debug(f'{method}: {endpoint} {payload}')
         if isinstance(method, Method):
             method = method.value
@@ -126,12 +136,15 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         yield {'responseHeader': {'status': 'finished'}}
         log.debug(f'FINISHED: {method}: {endpoint} {payload}')
 
-    @command('search a solr collection', Availability.PRODUCTION, {
+    @command(Availability.PRODUCTION, {
         'collection': 'the collection you want to search in',
         'payload': 'the parameters of the search',
         'return': 'the result of the response'
     })
     async def select(self, collection: str, payload: dict, rqid: str):
+        """
+        search a solr collection
+        """
         # endpoint = f'/c/{collection}/select'
         await self.channel_layer.group_send(self.groupname, {
             'type': 'group.select',
@@ -143,11 +156,14 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         # async for res in self.pass_through(endpoint, Method.GET, payload, rqid):
         #     yield res
 
-    @command('search a solr collection', Availability.PRODUCTION, {
+    @command(Availability.PRODUCTION, {
         'collection': 'the collection you want to search in',
         'id': 'the document id'
     })
     async def get(self, collection: str, id: str, rqid: str):
+        """
+        search a solr collection
+        """
         await self.channel_layer.group_send(self.groupname, {
             'type': 'group.get',
             'collection': collection,
@@ -158,12 +174,15 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         #     yield res
         yield None
 
-    @command('get the position of an author in their publications', Availability.PRODUCTION, {
+    @command(Availability.PRODUCTION, {
         'collection': 'the collection to search in',
         'author': 'the author to give positions for',
         'rows': 'the number of publications by this author'
     })
     async def author_position(self, collection: str, author: str, rows: int, rqid: str):
+        """
+        get the position of an author in their publications
+        """
         await self.channel_layer.group_send(self.groupname, {
             'type': 'group.author_position',
             'collection': collection,
@@ -172,6 +191,74 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
             'rqid': rqid
         })
         yield None
+
+    @command(Availability.PRODUCTION, {
+        'graph': 'the graph as string',
+    })
+    async def store_new_graph(self, graph: str, rqid: str):
+        """
+        store a graph in the database
+        """
+        await self.accept_command(rqid)
+        new_id = await self.create_graph(graph)
+        await self.send_response(JsonRpcResultResponse({'id': str(new_id)},rqid))
+        await self.finished_command(rqid)
+        yield None
+
+    @database_sync_to_async
+    def create_graph(self, graph: str):
+        stored = Graph(graph_str=graph, ctime=timezone.now(), mtime=timezone.now())
+        stored.save()
+        return stored.id
+
+    @command(Availability.PRODUCTION, {
+        'graph_id': 'the uuid of a graph'
+    })
+    async def get_graph(self, graph_id: str, rqid: str):
+        """
+        get a graph from the database
+        """
+        await self.accept_command(rqid)
+        graph = await self.get_graph_from_db(graph_id)
+        graph_str = await self.decode_json(graph.graph_str)
+        await self.send_response(JsonRpcResultResponse({'graph': graph_str},rqid))
+        await self.finished_command(rqid)
+        yield None
+
+    @database_sync_to_async
+    def get_graph_from_db(self, graph_id):
+        try:
+            return Graph.objects.get(id=graph_id)
+        except dex.ObjectDoesNotExist:
+            raise JsonRpcInvalidParams(f'no graph with id: {graph_id}')
+        except dex.ValidationError as e:
+            raise JsonRpcInvalidParams(str(e))
+
+    @command(Availability.PRODUCTION,{
+        'graph_id': 'id of graph to update',
+        'data': 'the new value'
+    })
+    async def update_graph(self, graph_id: str, data: str, rqid):
+        """
+        update an existing graph
+        """
+        await self.accept_command(rqid)
+        graph = await self.store_graph(graph_id, data)
+        await self.send_response(JsonRpcResultResponse({'id': str(graph.id)},rqid))
+        await self.finished_command(rqid)
+        yield None
+
+    @database_sync_to_async
+    def store_graph(self, graph_id, data):
+        try:
+            graph = Graph.objects.get(id=graph_id)
+            graph.graph_str = data
+            graph.save()
+            return graph
+        except dex.ObjectDoesNotExist:
+            raise JsonRpcInvalidParams(f'no graph with id: {graph_id}')
+        except dex.ValidationError as e:
+            raise JsonRpcInvalidParams(str(e))
 
     async def finished_command(self, request_id):
         msg = {'responseHeader': {'status': 'finished'}}
