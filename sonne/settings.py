@@ -27,12 +27,13 @@ if socket.gethostname() == 'sonne':
     DEBUG = False
     SECRET_KEY = Path('/srv/http/DJANGO_SECRET').read_text()
     SOLR_HOST = 'http://solr1:8983'
+    ALLOWED_HOSTS = ['daphne']
 else:
     print('running in DEBUG mode')
     DEBUG = True
     SOLR_HOST = 'http://localhost:8983'
     SECRET_KEY = '$39&prvnp-+)docy$k&ue425%g5e$6$@sv!*_@prtg-^$8v8*i'
-ALLOWED_HOSTS = []
+    ALLOWED_HOSTS = []
 
 LOGGING = {
     'version': 1,
@@ -198,3 +199,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = '/srv/http/sonne/static'

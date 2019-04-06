@@ -2,9 +2,11 @@ deployBackend:
   script:
   - cp -r * /srv/http/sonne
   - cd /srv/http/sonne
+  - sudo systemctl stop daphne
   - pip install --user -r requirements.txt
   - python manage.py migrate
-  - sudo systemctl restart daphne
+  - python manage.py collectstatic --no-input
+  - sudo systemctl start daphne
   only:
   - backend
   tags:
