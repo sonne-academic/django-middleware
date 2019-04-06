@@ -8,3 +8,7 @@ deployBackend:
   - backend
   tags:
   - sonne
+  when: manual
+  environment:
+    name: django
+    url: https://sonne.0ds.de
