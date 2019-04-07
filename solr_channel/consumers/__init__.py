@@ -1,1 +1,2 @@
 from .JsonRpcSolrPassthrough import JsonRpcSolrPassthrough
+from .JsonRpcHandlerBase import JsonRpcHandlerBase
