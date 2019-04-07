@@ -23,7 +23,7 @@ class SanityCheckedLayer(abc.ABC, BaseChannelLayer):
     async def new_channel(self, prefix="specific."):
         return await self.on_new_channel(prefix)
 
-    async def send(self, channel, message: dict):
+    async def send(self, channel: str, message: dict):
         assert isinstance(message, dict), "message is not a dict"
         assert self.valid_channel_name(channel), "Channel name not valid"
         # If it's a process-local channel, strip off local part and stick full name in message

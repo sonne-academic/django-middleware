@@ -4,6 +4,7 @@ import random
 import json
 import asyncio
 import collections
+from typing import Dict
 
 from channels.exceptions import ChannelFull
 import zmq.asyncio
@@ -19,10 +20,8 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
     def __init__(self, expiry=60, capacity=1000, channel_capacity=1000, group_expiry=86400, **kwargs):
         super().__init__(expiry=expiry, capacity=capacity, channel_capacity=channel_capacity, group_expiry=group_expiry, **kwargs)
         self.zmqctx = zmq.asyncio.Context.instance()
-        self.channels = collections.defaultdict(self.make_channel)
+        self.channels: Dict[str, Channel] = collections.defaultdict(self.make_channel)
         self.publisher = Publisher(self.zmqctx, capacity, expiry)
-        # self.log = logging.getLogger('zmq_layer')
-        log.debug('finished')
         for k, v in kwargs.items():
             log.warning(f'unparsed config entry: {k}: {v}')
 
@@ -32,14 +31,13 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
         chn = Channel(self.zmqctx, self.capacity)
         return chn
 
-    async def on_receive(self, channel):
+    async def on_receive(self, channel: str):
         message = await self.channels[channel].receive()
         log.debug(f'message: {message}')
         return message
 
-    async def on_send(self, channel, message: dict):
-        log.error('not implemented, not sending!')
-        raise NotImplementedError
+    async def on_send(self, channel: str, message: dict):
+        await self.channels[channel].send(json.dumps(message))
 
     async def on_new_channel(self, prefix="specific."):
         rand = ''.join(random.choice(string.ascii_letters) for i in range(12))
@@ -59,10 +57,7 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
 
     async def on_group_send(self, group, message):
         log.info(f'group: [{group}] message: [{message}]')
-        try:
-            await self.publisher.send_group(group, json.dumps(message))
-        except ChannelFull:
-            raise
+        await self.publisher.send_group(group, json.dumps(message))
 
     async def flush(self):
         raise NotImplementedError
