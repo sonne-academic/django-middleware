@@ -3,8 +3,9 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from dataclasses import dataclass, field, asdict
-from typing import Union
+from typing import Union, Any
 from .JsonRpcExceptions import *
+
 log = logging.getLogger(__name__)
 
 
@@ -20,6 +21,7 @@ class JsonRpcRequest:
             raise JsonRpcInvalidRequest(f'only jsonrpc 2.0 is supported, you sent {self.jsonrpc}')
         if type(id) is str and self.method.startswith('rpc.'):
             raise JsonRpcInvalidRequest(f'you may not call internal RPC methods (methods starting with "rpc.")')
+
 
 @dataclass
 class JsonRpcErrorResponse:
@@ -63,14 +65,18 @@ class JsonRpcConsumer(AsyncWebsocketConsumer):
         try:
             request = await build_request(text_data)
         except JsonRpcException as e:
-            await self.send_error(e,None)
+            await self.send_error(e, None)
             return
 
         try:
             await self.handle_request(request)
         except JsonRpcException as e:
+            log.exception(e)
             await self.send_error(e, request.id)
             return
+        except Exception as e:
+            log.exception(e)
+            await self.send_error(JsonRpcInternalError(f'something bad happened, sorry.'), request.id)
 
     async def send_error(self, exception: JsonRpcException, msg_id):
         log.error(exception.message)
@@ -79,6 +85,9 @@ class JsonRpcConsumer(AsyncWebsocketConsumer):
     async def send_response(self, response: JsonRpcResultResponse):
         logging.debug(response)
         await self.send_json(asdict(response))
+
+    async def send_result(self, result: Any, rqid: str):
+        await self.send_response(JsonRpcResultResponse(result, rqid))
 
     @abstractmethod
     async def handle_request(self, request: JsonRpcRequest):
