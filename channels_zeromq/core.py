@@ -1,24 +1,24 @@
-import logging
-import string
-import random
-import json
-import asyncio
 import collections
+import json
+import logging
+import random
+import string
 from typing import Dict
 
-from channels.exceptions import ChannelFull
-import zmq.asyncio
 import zmq
+import zmq.asyncio
 
 from channels_zeromq.sane_abc import FlushExtension, SanityCheckedGroupLayer
 from channels_zeromq.sockets import Publisher, Channel
 
 log = logging.getLogger(__name__)
 
+
 class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
 
     def __init__(self, expiry=60, capacity=1000, channel_capacity=1000, group_expiry=86400, **kwargs):
-        super().__init__(expiry=expiry, capacity=capacity, channel_capacity=channel_capacity, group_expiry=group_expiry, **kwargs)
+        super().__init__(expiry=expiry, capacity=capacity, channel_capacity=channel_capacity, group_expiry=group_expiry,
+                         **kwargs)
         self.zmqctx = zmq.asyncio.Context.instance()
         self.channels: Dict[str, Channel] = collections.defaultdict(self.make_channel)
         self.publisher = Publisher(self.zmqctx, capacity, expiry)
@@ -40,7 +40,7 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
         await self.channels[channel].send(json.dumps(message))
 
     async def on_new_channel(self, prefix="specific."):
-        rand = ''.join(random.choice(string.ascii_letters) for i in range(12))
+        rand = ''.join(random.choice(string.ascii_letters) for _ in range(12))
         channel = f'{prefix}.zmq!{rand}'
         log.info(f'channel: [{channel}]')
         if len(self.channels) <= self.channel_capacity:

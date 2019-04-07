@@ -1,14 +1,14 @@
-import logging
+import asyncio
 import json
+import logging
 
-from channels.exceptions import ChannelFull
 import zmq
 import zmq.asyncio
-import asyncio
 
 CLIENT_ADDRESS = 'inproc://somename'
 
 log = logging.getLogger(__name__)
+
 
 class Channel:
     def __init__(self, context: zmq.asyncio.Context, capacity):
@@ -68,6 +68,7 @@ class Channel:
 
 class Publisher:
     TASK_COUNT = 4
+
     def __init__(self, context, capacity, expiry):
         self.socket = context.socket(zmq.PUB)
         self.socket.hwm = capacity

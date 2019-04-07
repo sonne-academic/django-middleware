@@ -1,5 +1,6 @@
-from channels.layers import BaseChannelLayer, InMemoryChannelLayer
 import abc
+
+from channels.layers import BaseChannelLayer
 
 
 class FlushExtension(abc.ABC):
