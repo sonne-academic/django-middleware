@@ -11,4 +11,5 @@ websocket_urlpatterns = [
 for route in websocket_urlpatterns:
     if issubclass(route.callback, consumers.JsonRpcHandlerBase):
         log.error(f'{route.pattern}: {json.dumps(route.callback.commands.get(route.callback.__qualname__),indent=2)}')
+        log.error(f'{route.pattern}: {json.dumps(route.callback.chn_commands.get(route.callback.__qualname__), indent=2)}')
         pass
