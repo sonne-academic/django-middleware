@@ -5,16 +5,13 @@ import logging
 import zmq
 import zmq.asyncio
 
-CLIENT_ADDRESS = 'inproc://somename'
-
 log = logging.getLogger(__name__)
 
 
 class Channel:
-    def __init__(self, context: zmq.asyncio.Context, capacity):
-
+    def __init__(self, host, context: zmq.asyncio.Context, capacity):
         self.socket = context.socket(zmq.SUB)
-        self.socket.connect(CLIENT_ADDRESS)
+        self.socket.connect(host)
         # high water mark, aka: when to block or drop packets
         self.socket.hwm = capacity
         self.queue = asyncio.Queue(capacity)
@@ -69,11 +66,11 @@ class Channel:
 class Publisher:
     TASK_COUNT = 4
 
-    def __init__(self, context, capacity, expiry):
+    def __init__(self, host, context, capacity, expiry):
         self.socket = context.socket(zmq.PUB)
         self.socket.hwm = capacity
         self.expiry = expiry
-        self.socket.bind(CLIENT_ADDRESS)
+        self.socket.bind(host)
         self.queue = asyncio.Queue(capacity)
         self.tasks = [asyncio.create_task(self._send_group()) for _ in range(self.TASK_COUNT)]
 

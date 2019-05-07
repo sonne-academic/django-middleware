@@ -89,7 +89,7 @@ LOGGING = {
             'propagate': False,
         },
         'solr_channel': {
-            'handlers': ['shorter'],
+            'handlers': ['shorter', 'stderr'],
             'level': 'INFO',
             'propagate': False,
         },
@@ -100,7 +100,6 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_zeromq.core.ZeroMqGroupLayer',
         'CONFIG': {
-            "capacity": 2,
             "channel_capacity": 1000,
         },
     },

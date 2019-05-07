@@ -16,19 +16,20 @@ log = logging.getLogger(__name__)
 
 class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
 
-    def __init__(self, expiry=60, capacity=1000, channel_capacity=1000, group_expiry=86400, **kwargs):
+    def __init__(self, host='inproc://somename', expiry=60, capacity=1000, channel_capacity=1000, group_expiry=86400, **kwargs):
         super().__init__(expiry=expiry, capacity=capacity, channel_capacity=channel_capacity, group_expiry=group_expiry,
                          **kwargs)
         self.zmqctx = zmq.asyncio.Context.instance()
+        self.host = host
         self.channels: Dict[str, Channel] = collections.defaultdict(self.make_channel)
-        self.publisher = Publisher(self.zmqctx, capacity, expiry)
+        self.publisher = Publisher(self.host , self.zmqctx, capacity, expiry)
         for k, v in kwargs.items():
             log.warning(f'unparsed config entry: {k}: {v}')
 
     extensions = ['groups', 'flush']
 
     def make_channel(self):
-        chn = Channel(self.zmqctx, self.capacity)
+        chn = Channel(self.host, self.zmqctx, self.capacity)
         return chn
 
     async def on_receive(self, channel: str):
