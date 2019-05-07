@@ -253,6 +253,9 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         'rows': 'the number of publications by this author'
     })
     async def solr_author_position(self, event: SolrAuthorPosition) -> List[AuthorPosition]:
+        """
+        Calculate the occuring positions of an author.
+        """
         collection = event.collection
         author = event.author
         rows = event.rows
