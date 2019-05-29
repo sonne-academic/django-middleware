@@ -36,10 +36,10 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
         return chn
 
     def shutdown(self):
-        log.info('shutdown hook tripped')
+        log.error('shutdown hook tripped')
         loop=asyncio.get_event_loop()
         loop.run_until_complete(self.close())
-        log.info('shutdown hook done')
+        log.error('shutdown hook done')
 
     async def on_receive(self, channel: str):
         message = await self.channels[channel].receive()
