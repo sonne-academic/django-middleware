@@ -6,8 +6,8 @@ from enum import Enum
 from json.decoder import JSONDecodeError
 from typing import List
 
-from aiohttp import ClientSession, TCPConnector
 from aiohttp.client_exceptions import ClientConnectionError, ClientConnectorError
+import aiohttp
 from channels.db import database_sync_to_async
 from django.conf import settings
 from django.core import exceptions as dex
@@ -108,49 +108,49 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.group_name = ''
-        self.http: ClientSession = None
 
     async def connect(self):
         self.group_name = ''.join(random.choice(string.ascii_letters) for _ in range(12))
-        conn = TCPConnector(limit=2)
-        self.http = ClientSession(connector=conn)
         await self.channel_layer.group_add(group=self.group_name, channel=self.channel_name)
-        return await super().connect()
+        await super().connect()
 
     async def disconnect(self, code):
-        await self.http.close()
         await self.channel_layer.group_discard(group=self.group_name, channel=self.channel_name)
         self.group_name = ''
         return await super().disconnect(code)
 
-    def _method(self, m: Method):
+    def _method(self, m: Method, session):
         if Method.GET == m:
-            return self.http.get
+            return session.get
         if Method.POST == m:
-            return self.http.post
+            return session.post
         if Method.DELETE == m:
-            return self.http.delete
+            return session.delete
         if Method.PUT == m:
-            return self.http.put
+            return session.put
 
     async def solr_http(self, endpoint: str, method: Method, json=None, params=None):
-        async with self._method(method)(endpoint, json=json, params=params) as response:
-            log.info(response.request_info)
-            result =  await response.json()
-            if 'error' in result:
-                raise JsonRpcInternalError('solr responded with an error', result['error'])
-            else:
-                return result
+        async with aiohttp.ClientSession() as session:
+            async with self._method(method, session)(endpoint, json=json, params=params) as response:
+                log.info(response.request_info)
+                result = await response.json()
+                if 'error' in result:
+                    raise JsonRpcInternalError('solr responded with an error', result['error'])
+                else:
+                    return result
+
 
     async def get_result_api(self, endpoint: str, method: Method, payload: dict) -> dict:
         log.info(f'{method}: {endpoint} {payload}')
-        async with self._method(method)(endpoint, json=payload) as response:
-            return await response.json()
+        async with aiohttp.ClientSession() as session:
+            async with self._method(method, session)(endpoint, json=payload) as response:
+                return await response.json()
 
     async def get_result_solr(self, endpoint: str, method: Method, params: dict) -> dict:
         log.debug(f'{method}: {endpoint} {params}')
-        async with self._method(method)(endpoint, params=params) as response:
-            return await response.json()
+        async with aiohttp.ClientSession() as session:
+            async with self._method(method, session)(endpoint, params=params) as response:
+                return await response.json()
 
     async def handle_exception(self, e: Exception, msg_id: str):
         if type(e) is ClientConnectionError:
