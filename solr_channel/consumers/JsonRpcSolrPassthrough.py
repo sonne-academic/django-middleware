@@ -32,6 +32,12 @@ class AuthorPosition:
 
 
 @dataclass
+class AuthorCitations:
+    citation_count: List[int]
+    year: List[int]
+
+
+@dataclass
 class SolrBaseParams:
     rqid: str
     type: str
@@ -308,9 +314,10 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         'collection': 'the collection to search in',
         'author': 'the author to give citations for',
     })
-    async def solr_author_citations(self, event: SolrAuthorCitations) -> List[AuthorPosition]:
+    async def solr_author_citations(self, event: SolrAuthorCitations) -> AuthorCitations:
         """
-        Calculate the occuring positions of an author.
+        Returns a list of citation counts and publication years for the author.
+        The list is sorted by the citation counts.
         """
         collection = event.collection
         author = event.author
