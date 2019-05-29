@@ -3,10 +3,12 @@ import json
 import logging
 import random
 import string
+import asyncio
 from typing import Dict
-
+from twisted.internet import reactor
 import zmq
 import zmq.asyncio
+from channels.http import async_to_sync
 
 from channels_zeromq.sane_abc import FlushExtension, SanityCheckedGroupLayer
 from channels_zeromq.sockets import Publisher, Channel
@@ -23,6 +25,7 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
         self.host = host
         self.channels: Dict[str, Channel] = collections.defaultdict(self.make_channel)
         self.publisher = Publisher(self.host , self.zmqctx, capacity, expiry)
+        reactor.addSystemEventTrigger("during", "shutdown", self.shutdown)
         for k, v in kwargs.items():
             log.warning(f'unparsed config entry: {k}: {v}')
 
@@ -31,6 +34,12 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
     def make_channel(self):
         chn = Channel(self.host, self.zmqctx, self.capacity)
         return chn
+
+    def shutdown(self):
+        log.info('shutdown hook tripped')
+        loop=asyncio.get_event_loop()
+        loop.run_until_complete(self.close())
+        log.info('shutdown hook done')
 
     async def on_receive(self, channel: str):
         message = await self.channels[channel].receive()
@@ -64,4 +73,9 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
         raise NotImplementedError
 
     async def close(self):
+        log.info('closing zmq layer')
+        for channel in self.channels.values():
+            channel.close()
+        self.publisher.close()
         self.zmqctx.term()
+        log.info('closed zmq layer')
