@@ -49,7 +49,7 @@ LOGGING = {
     'formatters': {
         'verbose': {
             # 'format': '[{levelname}-{asctime}][{module}][{process:d}-{thread:d}] {message}',
-            'format': '[{levelname:5s}][{asctime}][{module}.{name}][{funcName}] {message}',
+            'format': '[{levelname:5s}][{asctime}][{module}][{name}][{funcName}] {message}',
             'style': '{',
         },
         'shorter': {
@@ -89,7 +89,7 @@ LOGGING = {
             'propagate': False,
         },
         'solr_channel': {
-            'handlers': ['shorter', 'stderr'],
+            'handlers': ['stdout', 'stderr'],
             'level': 'INFO',
             'propagate': False,
         },
