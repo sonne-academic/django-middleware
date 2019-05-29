@@ -25,7 +25,7 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
         self.host = host
         self.channels: Dict[str, Channel] = collections.defaultdict(self.make_channel)
         self.publisher = Publisher(self.host , self.zmqctx, capacity, expiry)
-        reactor.addSystemEventTrigger("during", "shutdown", self.shutdown)
+        reactor.addSystemEventTrigger('before', 'shutdown', self.shutdown)
         for k, v in kwargs.items():
             log.warning(f'unparsed config entry: {k}: {v}')
 
@@ -74,8 +74,9 @@ class ZeroMqGroupLayer(SanityCheckedGroupLayer, FlushExtension):
 
     async def close(self):
         log.info('closing zmq layer')
+        self.publisher.close()
         for channel in self.channels.values():
             channel.close()
-        self.publisher.close()
+
         self.zmqctx.term()
         log.info('closed zmq layer')

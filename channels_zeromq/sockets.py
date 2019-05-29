@@ -55,7 +55,7 @@ class Channel:
 
     def close(self):
         log.info('stopping worker')
-        self.queue.put_nowait('STOP')
+        self.task.cancel()
         log.info('joining queue')
         self.queue.join()
         log.info('closing socket')
@@ -100,10 +100,8 @@ class Publisher:
 
     def close(self):
         log.info(f'stopping workers')
-        for _ in range(self.TASK_COUNT):
-            self.queue.put_nowait(('STOP', 'STOP'))
-        log.info('gathering workers')
-        asyncio.gather(*self.tasks)
+        for task in self.tasks:
+            task.cancel()
         log.info('join queue')
         self.queue.join()
         log.info('closing socket')
