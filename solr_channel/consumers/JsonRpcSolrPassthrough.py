@@ -50,6 +50,12 @@ class SolrAuthorPosition(SolrBaseParams):
 
 
 @dataclass
+class SolrAuthorCitations(SolrBaseParams):
+    collection: str
+    author: str
+
+
+@dataclass
 class SolrSelect(SolrBaseParams):
     collection: str
     payload: dict
@@ -297,6 +303,45 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         log.info(last)
         return r
         # return await self.send_result(result, event.rqid)
+
+    @chn_command(Availability.PRODUCTION, {
+        'collection': 'the collection to search in',
+        'author': 'the author to give citations for',
+    })
+    async def solr_author_citations(self, event: SolrAuthorCitations) -> List[AuthorPosition]:
+        """
+        Calculate the occuring positions of an author.
+        """
+        collection = event.collection
+        author = event.author
+        expr = f'''
+            let(echo="citation_count,year",
+                a=having(
+                    search(
+                        {collection}, 
+                        q=author:"{author}", 
+                        fl="cited_by_count,year", 
+                        sort="cited_by_count desc", 
+                        qt=/export
+                    ), 
+                    lt(0,cited_by_count)
+                ),
+                citation_count=col(a, cited_by_count),
+                year=col(a, year),
+        )'''
+        params = {'expr': expr}
+        endpoint = f'{SOLR}/{collection}/stream'
+        result = await self.solr_http(endpoint, Method.POST, params=params)
+        if 'result-set' not in result:
+            pass
+        result = result['result-set']
+        if 'docs' not in result:
+            pass
+        r: list = result['docs']
+        last = r.pop()
+        log.info(r)
+        log.info(last)
+        return r[0]
 
     @chn_command(Availability.PRODUCTION, {
         'collection': 'the collection you want to search in',
