@@ -19,7 +19,7 @@ when you want to add an endpoint, create a new class that inherits from `JsonRpc
 
 Then add it to the `solr_channel/routing.py` patterns, to register it with django.
 
-```python3
+```python
 @chn_command(Availability.PRODUCTION, {
     'collection': 'the collection you want to search in',
     'id': 'the document id'
@@ -29,7 +29,7 @@ async def solr_get(self, event: SolrGet) -> None:
 
 `SolrGet` is a dataclass that is used for generating the documentation and validation of the client-sent parameters.
 
-```python3
+```python
 @dataclass
 class SolrBaseParams:
     rqid: str
