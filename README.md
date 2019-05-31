@@ -23,6 +23,7 @@ If that is not to your liking, change the hostname in the settings.py, so the se
 python manage.py migrate
 python manage.py collectstatic --no-input
 ```
+
 will prepare the database and place all files where they are expected to be.
 
 Once this completed without error, copy the `daphne.service` to `/etc/systemd/system`, and the content of the nginx directory to `/etc/nginx`.
@@ -39,6 +40,8 @@ You'll still have to configure nginx and systemd to serve the connection.
 in the source directory, create a new venv with `python -m venv venv`, and activate the environment with `source ./venv/bin/activate`.
 then install all requirements with `pip install -r requirements.txt`.
 If you don't want to use a venv, you can use `pip install --user -r requirements.txt` instead.
+
+run the server with `./manage.py runserver` 
 
 ## project structure
 
@@ -83,5 +86,3 @@ Once you're done with the function, return the result; the base class will deliv
 The base class will also handle any exception that is raised and wrap it into an error, that is sent to the client.
 
 If you don't like the base handler and want to do everything manually, refert to the [channels documentation](https://channels.readthedocs.io/en/latest/), in detail the [consumers](https://channels.readthedocs.io/en/latest/topics/consumers.html) section.
-
-
