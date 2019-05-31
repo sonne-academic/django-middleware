@@ -11,25 +11,28 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+import sys
 import socket
 from pathlib import Path
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-if socket.gethostname() == 'sonne':
-    print('running in PRODUCTION mode')
+if 'sonne' == socket.gethostname():
+    print('running in PRODUCTION mode', sys.stderr)
     DEBUG = False
-    SECRET_KEY = Path('/srv/http/DJANGO_SECRET').read_text()
+    if not Path(f'/{BASE_DIR}/DJANGO_SECRET').is_file():
+        from django.core.management.utils import get_random_secret_key
+        Path(f'/{BASE_DIR}/DJANGO_SECRET').write_text(get_random_secret_key())
+    SECRET_KEY = Path(f'/{BASE_DIR}/DJANGO_SECRET').read_text()
     SOLR_HOST = 'http://solr1:8983'
     ALLOWED_HOSTS = ['daphne']
 else:
-    print('running in DEBUG mode')
+    print('running in DEBUG mode', sys.stderr)
     DEBUG = True
     SOLR_HOST = 'http://localhost:8983'
     SECRET_KEY = '$39&prvnp-+)docy$k&ue425%g5e$6$@sv!*_@prtg-^$8v8*i'
@@ -198,4 +201,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = '/srv/http/sonne/static'
+STATIC_ROOT = f'/{BASE_DIR}/static'
