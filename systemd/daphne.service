@@ -1,0 +1,21 @@
+[Unit]
+Description=Daphne Server
+After=syslog.target network.target
+Before=nginx.service
+ConditionFileIsExecutable=/srv/http/.local/bin/daphne
+
+[Service]
+WorkingDirectory=/srv/http/sonne
+StartLimitInterval=5
+StartLimitBurst=10
+ExecStart=/srv/http/.local/bin/daphne -u /tmp/sonne_daphne.sock sonne.asgi:application
+Restart=always
+RestartSec=120
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=daphne-sonne
+User=http
+Group=http
+
+[Install]
+WantedBy=multi-user.target
