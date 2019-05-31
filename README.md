@@ -11,7 +11,7 @@ The service is managed through systemd, the configuration is in the `systemd` fo
 Our configuration and deployment uses the following folders:
 
   - `/srv/http/sonne` contains the django application (everything within the `src` folder).
-  - `/srv/http/static` contains the compiled (frontend)[https://github.com/sonne-academic/vue-frontend].
+  - `/srv/http/static` contains the compiled [frontend](https://github.com/sonne-academic/vue-frontend).
 
 As your `http` user (you do not run this as root, right?), place the contents of the src folder into `/srv/http/sonne`.
 Then run `pip install --user -r requirements.txt` to install all necessary dependencies.
@@ -31,7 +31,7 @@ Use `systemctl enable --now daphne` to start the server and autostart it on boot
 
 ## CI/CD
 
-We use a gitlab-runner on the host that is running the web server, for details see the `.gitlab-ci` and the (gitlab-runner documentation)[https://about.gitlab.com/product/continuous-integration/#gitlab-runner].
+We use a gitlab-runner on the host that is running the web server, for details see the `.gitlab-ci` and the [gitlab-runner documentation](https://about.gitlab.com/product/continuous-integration/#gitlab-runner).
 If you deploy to the same paths as we do, this should take care of everything on the python side.
 You'll still have to configure nginx and systemd to serve the connection.
 
