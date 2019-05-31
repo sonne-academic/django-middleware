@@ -35,13 +35,15 @@ We use a gitlab-runner on the host that is running the web server, for details s
 If you deploy to the same paths as we do, this should take care of everything on the python side.
 You'll still have to configure nginx and systemd to serve the connection.
 
+The runner should run as http user or something similar to achieve correct access-rights.
+
 # development
 
 in the source directory, create a new venv with `python -m venv venv`, and activate the environment with `source ./venv/bin/activate`.
 then install all requirements with `pip install -r requirements.txt`.
 If you don't want to use a venv, you can use `pip install --user -r requirements.txt` instead.
 
-run the server with `./manage.py runserver` 
+run the server with `./manage.py runserver`.
 
 ## project structure
 
