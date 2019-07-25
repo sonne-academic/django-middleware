@@ -10,8 +10,8 @@ deployBackend:
   only:
   - backend
   tags:
-  - sonne
+  - sonne2
   when: manual
   environment:
-    name: django
+    name: django2
     url: https://sonne.0ds.de
