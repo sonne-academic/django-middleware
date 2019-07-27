@@ -323,15 +323,12 @@ class JsonRpcSolrPassthrough(JsonRpcHandlerBase):
         author = event.author
         expr = f'''
             let(echo="citation_count,year",
-                a=having(
-                    search(
-                        {collection}, 
-                        q=author:"{author}", 
-                        fl="cited_by_count,year", 
-                        sort="cited_by_count desc", 
-                        qt=/export
-                    ), 
-                    lt(0,cited_by_count)
+                a=search(
+                    {collection}, 
+                    q=author:"{author}" AND cited_by_count:[1 TO *], 
+                    fl="cited_by_count,year", 
+                    sort="cited_by_count desc", 
+                    qt=/export
                 ),
                 citation_count=col(a, cited_by_count),
                 year=col(a, year),
